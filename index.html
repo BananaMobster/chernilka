@@ -590,12 +590,13 @@ const L = {
     locked: '???', lockedDesc: 'Откроется, когда студия подрастёт',
     nextFilm: n => `Следующий фильм: «${n}»`,
     boostMain: '×2 на 3 минуты',
-    boostSub: 'бесплатно, раз в 10 минут',
+    boostSub: 'за просмотр рекламы',
+    boostSubFree: 'бесплатно, раз в 10 минут',
     boostWait: s => `×2 через ${s}`,
     boostWaitSub: 'ускорение заряжается',
     boostActive: s => `×2 ещё ${s}`,
     boostLeft: 'ускорение работает',
-    boostAria: 'Ускорить студию в 2 раза на 3 минуты',
+    boostAria: 'Посмотреть рекламу и ускорить студию в 2 раза на 3 минуты',
     premiereNo: n => `Премьера мультфильма №${n}`,
     premiereBonus: 'Слава студии растёт: <b>+10%</b> к производству кадров',
     colorBonus: 'Студия переходит на <b>цветную плёнку!</b><br>И слава растёт: <b>+10%</b> к производству',
@@ -644,12 +645,13 @@ const L = {
     locked: '???', lockedDesc: 'Unlocks as your studio grows',
     nextFilm: n => `Next film: “${n}”`,
     boostMain: '×2 for 3 minutes',
-    boostSub: 'free, every 10 minutes',
+    boostSub: 'watch an ad',
+    boostSubFree: 'free, every 10 minutes',
     boostWait: s => `×2 in ${s}`,
     boostWaitSub: 'recharging',
     boostActive: s => `×2 for ${s}`,
     boostLeft: 'boost is on',
-    boostAria: 'Double studio speed for 3 minutes',
+    boostAria: 'Watch an ad to double studio speed for 3 minutes',
     premiereNo: n => `Premiere of cartoon No. ${n}`,
     premiereBonus: 'Your studio is getting famous: <b>+10%</b> frame production',
     colorBonus: 'The studio switches to <b>color film!</b><br>And fame grows: <b>+10%</b> production',
@@ -800,6 +802,7 @@ function mockAd(rewarded, cb) {
   }, 700);
 }
 
+const ADSGRAM_BLOCK = '53974';  // UnitID рекламного блока Reward в кабинете AdsGram
 async function initSDK() {
   // Telegram WebApp вместо SDK Яндекса
   const ok = await loadScript('https://telegram.org/js/telegram-web-app.js?64', 8000);
@@ -831,13 +834,30 @@ async function initSDK() {
   const q = new URLSearchParams(location.search);
   const ln = String(q.get('lang') || (user && user.language_code) || navigator.language || 'ru').slice(0, 2).toLowerCase();
   const cloud = at('6.9') && tg.CloudStorage ? tg.CloudStorage : null;
+  // Реклама AdsGram работает только внутри Telegram
+  let adc = null;
+  if (inTg && ADSGRAM_BLOCK) {
+    const debug = (tg.initDataUnsafe && tg.initDataUnsafe.start_param === 'adsdebug') || q.get('adsdebug') === '1';
+    if (await loadScript('https://sad.adsgram.ai/js/sad.min.js', 8000) && window.Adsgram) {
+      try { adc = window.Adsgram.init(debug ? { blockId: ADSGRAM_BLOCK, debug: true } : { blockId: ADSGRAM_BLOCK }); } catch (e) { adc = null; }
+    }
+  }
   const call = (fn, ...args) => withTimeout(new Promise(res => {
     try { cloud[fn](...args, (err, val) => res(err ? null : val)); } catch (e) { res(null); }
   }), 5000);
   return {
     environment: { i18n: { lang: ln } },
     features: { LoadingAPI: { ready() {} } },
-    adv: null,
+    adv: adc ? {
+      // межстраничной рекламы в Telegram-версии нет
+      showFullscreenAdv(o) { const cb = (o && o.callbacks) || {}; cb.onClose && cb.onClose(false); },
+      showRewardedVideo(o) {
+        const cb = (o && o.callbacks) || {};
+        adc.show()
+          .then(r => { if (!r || r.done) cb.onRewarded && cb.onRewarded(); cb.onClose && cb.onClose(true); })
+          .catch(r => { if (r && r.error) cb.onError && cb.onError(r); else cb.onClose && cb.onClose(true); });
+      },
+    } : null,
     getPlayer: async () => cloud ? {
       getData: async () => { const v = await call('getItem', 'save'); try { return v ? { save: JSON.parse(v) } : {}; } catch (e) { return {}; } },
       setData: d => call('setItem', 'save', JSON.stringify(d.save)),
@@ -1572,6 +1592,7 @@ el.seg.addEventListener('click', e => {
 /* =========================================================
    Счётчики, прогресс премьеры, ускорение
    ========================================================= */
+let boostIcon = null;
 function boostWait() {
   if (!S.boostAt) return 0;
   const passed = (now() - S.boostAt) / 1000;
@@ -1595,7 +1616,9 @@ function updateHUD() {
     cells[i].style.background = f > 0 && f < 1 ? `linear-gradient(90deg, var(--cell) ${(f * 100).toFixed(0)}%, #3D3B41 ${(f * 100).toFixed(0)}%)` : '';
   }
 
-  const wait = boostWait();
+  const ads = !!(ysdk && ysdk.adv);
+  const wait = ads ? 0 : boostWait();
+  if (boostIcon !== ads) { boostIcon = ads; el.boostBtn.querySelector('use').setAttribute('href', ads ? '#i-ad' : '#i-fast'); }
   el.boostBtn.classList.toggle('wait', S.boost <= 0 && wait > 0);
   if (S.boost > 0) {
     el.boostBtn.disabled = true;
@@ -1608,14 +1631,19 @@ function updateHUD() {
   } else {
     el.boostBtn.disabled = false;
     el.boostMain.textContent = t('boostMain');
-    el.boostSub.textContent = t('boostSub');
+    el.boostSub.textContent = t(ads ? 'boostSub' : 'boostSubFree');
   }
 }
 el.boostBtn.addEventListener('click', () => {
   audioInit();
-  if (S.boost > 0 || boostWait() > 0) return;
-  S.boost = BOOST_SECONDS; S.boostAt = now();
-  toast(t('boostStart')); SFX.reel(); haptic('buy'); queueSave(true);
+  if (S.boost > 0) return;
+  const grant = free => {
+    S.boost = BOOST_SECONDS; if (free) S.boostAt = now();
+    toast(t('boostStart')); SFX.reel(); haptic('buy'); queueSave(true);
+  };
+  const tryFree = () => { if (boostWait() <= 0) grant(true); else toast(t('adUnavailable')); };
+  if (ysdk && ysdk.adv) showRewarded(() => grant(false), tryFree);
+  else tryFree();
 });
 
 /* ---------- звук: кнопки ---------- */
@@ -1640,12 +1668,13 @@ function showInterstitial(after) {
     ysdk.adv.showFullscreenAdv({ callbacks: { onClose: fin, onError: fin, onOffline: fin } });
   } catch (e) { fin(); }
 }
-function showRewarded(onReward) {
-  if (!ysdk || !ysdk.adv) { toast(t('adUnavailable')); return; }
+function showRewarded(onReward, onFail) {
+  onFail = onFail || (() => toast(t('adUnavailable')));
+  if (!ysdk || !ysdk.adv) { onFail(); return; }
   let rewarded = false, done = false;
   const fin = ok => {
     if (done) return; done = true; adEnd();
-    if (rewarded) onReward(); else if (!ok) toast(t('adUnavailable'));
+    if (rewarded) onReward(); else if (!ok) onFail();
   };
   adStart();
   try {
@@ -1736,7 +1765,8 @@ function showOffline(amount) {
       <h2>${t('offlineTitle')}</h2>
       <p class="bonus">${t('offlineText', framesText(amount))}</p>
       <div class="btns">
-        <button class="btn" type="button" id="btnTake">${t('take')}</button>
+        <button class="btn${ysdk && ysdk.adv ? ' ghost' : ''}" type="button" id="btnTake">${t('take')}</button>${ysdk && ysdk.adv ? `
+        <button class="btn" type="button" id="btnTake2"><svg aria-hidden="true"><use href="#i-ad"/></svg>${t('takeX2')}</button>` : ''}
       </div>
     </div>`, false);
   let taken = false;
@@ -1752,6 +1782,10 @@ function showOffline(amount) {
     if (filmQueue.length) showPremiere();
   };
   $('btnTake').addEventListener('click', () => finish(1), { once: true });
+  if ($('btnTake2')) $('btnTake2').addEventListener('click', () => {
+    // если ролик не досмотрели, окно остаётся и можно забрать обычную сумму
+    showRewarded(() => finish(2));
+  });
 }
 
 /* =========================================================

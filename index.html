@@ -232,10 +232,10 @@ body.color #goldReel{filter:drop-shadow(0 0 12px rgba(242,183,5,.9)) drop-shadow
 }
 .tabs{display:flex; gap:4px; padding:10px 10px 0; border-bottom:2px solid var(--ink); flex:none}
 .tab{
-  position:relative; flex:1;
-  padding:11px 6px 10px; border:0; border-radius:7px 7px 0 0;
+  position:relative; flex:1 1 auto;
+  padding:11px 8px 10px; border:0; border-radius:7px 7px 0 0;
   background:none; color:var(--graphite); cursor:pointer;
-  font:700 16px/1.1 'Lora', serif;
+  font:700 15px/1.1 'Lora', serif;
 }
 .tab[aria-selected="true"]{background:var(--ink); color:var(--paper)}
 .badge{
@@ -298,6 +298,21 @@ body.color #goldReel{filter:drop-shadow(0 0 12px rgba(242,183,5,.9)) drop-shadow
 .stats b{display:block; font:700 17px/1.2 'Lora', serif; font-style:normal; color:var(--ink); font-variant-numeric:tabular-nums}
 
 .empty{padding:28px 22px; font:italic 15px/1.45 'Lora', serif; color:var(--graphite); text-align:center}
+
+/* рейтинг игроков */
+.lbrow{cursor:default}
+.lbrow:hover{background:none}
+.lbrow.me{background:rgba(0,0,0,.05); background:color-mix(in srgb, var(--cell) 30%, transparent)}
+.lbrow .medal{display:grid; place-items:center; width:32px; height:32px; font-size:18px; border-radius:50%; background:var(--cell); color:var(--ink); font-style:normal; box-shadow:inset 0 0 0 1.5px var(--ink); transition:background-color 1.8s ease}
+.lbrow .n.long{font-size:15px}
+.lbrow .pr b{justify-content:flex-end}
+.lbgap{padding:2px 0 8px 70px; border-bottom:1px solid var(--rule); color:var(--muted); font:700 20px/1 'Lora', serif; letter-spacing:.2em}
+.lbnote{display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid var(--rule); background:rgba(0,0,0,.03)}
+.lbnote p{margin:0; flex:1; min-width:0; font:italic 14px/1.4 'Lora', serif; color:var(--graphite)}
+.lbbtn{flex:none; min-height:40px; padding:8px 16px; border:0; border-radius:8px; background:var(--ink); color:var(--paper); font:700 15px/1.1 'Lora', serif; cursor:pointer}
+.lbbtn.ghost{background:none; color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--ink)}
+.lbbtn[disabled]{opacity:.45; cursor:default}
+.lbfoot{display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px 16px 16px; font:italic 13px/1.3 'Lora', serif; color:var(--graphite)}
 
 /* ---------- премьера и окна ---------- */
 #overlay{
@@ -387,6 +402,7 @@ body.color #overlay.black{
   .sheet{box-shadow:4px 4px 0 -1px var(--paper-2), 0 10px 30px rgba(0,0,0,.45)}
 }
 @media (max-width:380px){
+  .tab{font-size:14px; padding-left:5px; padding-right:5px}
   .logo i{display:none}
   .boostBtn small{display:none}
   .row .ds{font-size:12px}
@@ -539,6 +555,7 @@ body.color #overlay.black{
       <button class="tab" role="tab" id="tabStudio" aria-selected="true" data-tab="studio" type="button"><span data-t="tabStudio">Студия</span></button>
       <button class="tab" role="tab" id="tabUpgrades" aria-selected="false" data-tab="upgrades" type="button"><span data-t="tabUpgrades">Улучшения</span><span class="badge" id="upBadge" hidden>0</span></button>
       <button class="tab" role="tab" id="tabFilms" aria-selected="false" data-tab="films" type="button"><span data-t="tabFilms">Фильмы</span></button>
+      <button class="tab" role="tab" id="tabRating" aria-selected="false" data-tab="rating" type="button"><span data-t="tabRating">Рейтинг</span></button>
     </div>
     <div class="tools" id="tools">
       <span data-t="buyBy">Покупать по</span>
@@ -584,7 +601,19 @@ const L = {
     footage: 'Отснято',
     hint: 'Нажимайте на Чернильку, чтобы рисовать кадры',
     heroAria: 'Чернилька. Нажмите, чтобы нарисовать кадр',
-    tabStudio: 'Студия', tabUpgrades: 'Улучшения', tabFilms: 'Фильмы',
+    tabStudio: 'Студия', tabUpgrades: 'Улучшения', tabFilms: 'Фильмы', tabRating: 'Рейтинг',
+    lbYourClicks: 'Ваши нажатия', lbYourRank: 'Ваше место',
+    lbTaps: n => plural(Math.floor(n), 'нажатие', 'нажатия', 'нажатий'),
+    lbMe: 'Это вы', lbAnon: 'Игрок без имени',
+    lbLoading: 'Загружаем рейтинг…', lbLoadingShort: 'Загрузка…', lbRefresh: 'Обновить',
+    lbError: 'Не удалось загрузить рейтинг. Проверьте интернет и нажмите «Обновить».',
+    lbEmpty: 'В рейтинге пока никого нет. Нажимайте на Чернильку, и станете первым.',
+    lbLogin: 'Войдите в аккаунт Яндекса, чтобы попасть в рейтинг и сохранять прогресс на всех устройствах.',
+    lbLoginBtn: 'Войти',
+    lbOff: 'Рейтинг работает в версиях игры для Яндекс Игр и Telegram.',
+    lbTgOnly: 'Рейтинг доступен, когда игра открыта в Telegram.',
+    lbSoon: 'Рейтинг скоро появится.',
+    lbTotal: n => `Всего в рейтинге: ${NF0.format(n)}`,
     buyBy: 'Покупать по', buyMax: 'Макс',
     musicAria: 'Музыка', sfxAria: 'Звуки',
     locked: '???', lockedDesc: 'Откроется, когда студия подрастёт',
@@ -639,7 +668,19 @@ const L = {
     footage: 'Footage',
     hint: 'Tap Blotty to draw frames',
     heroAria: 'Blotty. Tap to draw a frame',
-    tabStudio: 'Studio', tabUpgrades: 'Upgrades', tabFilms: 'Films',
+    tabStudio: 'Studio', tabUpgrades: 'Upgrades', tabFilms: 'Films', tabRating: 'Leaders',
+    lbYourClicks: 'Your taps', lbYourRank: 'Your rank',
+    lbTaps: n => Math.floor(n) === 1 ? 'tap' : 'taps',
+    lbMe: 'This is you', lbAnon: 'Anonymous player',
+    lbLoading: 'Loading the leaderboard…', lbLoadingShort: 'Loading…', lbRefresh: 'Refresh',
+    lbError: 'Could not load the leaderboard. Check your connection and tap Refresh.',
+    lbEmpty: 'No one is on the leaderboard yet. Tap Blotty to be the first.',
+    lbLogin: 'Sign in to your Yandex account to join the leaderboard and keep your progress on all devices.',
+    lbLoginBtn: 'Sign in',
+    lbOff: 'The leaderboard works in the Yandex Games and Telegram versions of the game.',
+    lbTgOnly: 'The leaderboard is available when the game is opened in Telegram.',
+    lbSoon: 'The leaderboard is coming soon.',
+    lbTotal: n => `Players on the leaderboard: ${NF0.format(n)}`,
     buyBy: 'Buy', buyMax: 'Max',
     musicAria: 'Music', sfxAria: 'Sounds',
     locked: '???', lockedDesc: 'Unlocks as your studio grows',
@@ -842,6 +883,30 @@ async function initSDK() {
       try { adc = window.Adsgram.init(debug ? { blockId: ADSGRAM_BLOCK, debug: true } : { blockId: ADSGRAM_BLOCK }); } catch (e) { adc = null; }
     }
   }
+  // Адрес сервера рейтинга лежит в settings.json рядом с index.html, его можно менять без пересборки игры
+  let server = '';
+  try {
+    const r = await withTimeout(fetch('settings.json', { cache: 'no-store' }), 3000);
+    if (r && r.ok) {
+      const v = String((await r.json()).server || '').trim().replace(/\/+$/, '');
+      if (/^https:\/\/[^\s"'<>]+$/.test(v) || /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(v)) server = v;
+    }
+  } catch (e) {}
+  const post = (path, body) => withTimeout(
+    fetch(server + path, { method: 'POST', headers: { 'content-type': 'text/plain;charset=UTF-8' }, body: JSON.stringify(body) })
+      .then(r => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status))), 8000)
+    .then(v => { if (v === null) throw new Error('timeout'); return v; });
+  const lbCustom = !inTg ? { name: 'off', reason: 'tgonly' } : !server ? { name: 'off', reason: 'soon' } : {
+    name: 'telegram',
+    status() { return 'ok'; },
+    submit: score => post('/lb/submit', { initData: tg.initData, clicks: score }),
+    async load() {
+      const r = await post('/lb/top', { initData: tg.initData });
+      const rows = (r.top || []).map(e => ({ rank: e.rank, name: e.name, score: e.clicks, me: !!e.me }));
+      if (r.me && !rows.some(x => x.me)) rows.push({ rank: r.me.rank, name: r.me.name, score: r.me.clicks, me: true });
+      return { rows, myRank: r.me ? r.me.rank : 0, total: r.total || 0 };
+    },
+  };
   const call = (fn, ...args) => withTimeout(new Promise(res => {
     try { cloud[fn](...args, (err, val) => res(err ? null : val)); } catch (e) { res(null); }
   }), 5000);
@@ -869,6 +934,7 @@ async function initSDK() {
     },
     serverTime: () => Date.now(),
     platform: inTg ? tg.platform : 'browser',
+    lbCustom,
   };
 }
 const now = () => { try { const v = ysdk && ysdk.serverTime && ysdk.serverTime(); if (typeof v === 'number' && v > 0) return v; } catch (e) {} return Date.now(); };
@@ -1490,6 +1556,7 @@ function renderList(force) {
   if (tab === 'studio') key += visibleGens().join(',');
   if (tab === 'upgrades') key += UPGRADES.filter(upgradeVisible).map(u => u.id).join(',');
   if (tab === 'films') key += S.films + lang;
+  if (tab === 'rating') key += lb.ver + lang;
   if (!force && key === listKey) { updateList(); return; }
   listKey = key;
   el.tools.hidden = tab !== 'studio';
@@ -1512,6 +1579,8 @@ function renderList(force) {
       else { nm = t('clicks')[u.idx]; ds = u.kind === 'mul' ? t('clickMul') : t('clickFps'); ic = 'i-nib'; }
       h += `<button class="row" type="button" data-up="${u.id}"><span class="n">${ICON(ic)}</span><span class="main"><span class="txt"><span class="nm">${nm}</span><span class="ds">${ds}</span></span></span><span class="pr">${COST(u.cost)}</span></button>`;
     });
+  } else if (tab === 'rating') {
+    h = ratingHtml();
   } else {
     h += `<div class="stats">
       <div>${t('statFilms')}<b data-f="sf"></b></div>
@@ -1543,6 +1612,9 @@ function updateList() {
       const u = UPGRADES.find(x => x.id === r.dataset.up);
       r.classList.toggle('no', S.bank < u.cost);
     });
+  } else if (tab === 'rating') {
+    const c = el.list.querySelector('[data-f="lc"]');
+    if (c) c.textContent = fmt(S.clicks);
   } else {
     const q = f => el.list.querySelector(`[data-f="${f}"]`);
     if (q('sf')) {
@@ -1556,6 +1628,102 @@ function updateList() {
   el.upBadge.hidden = affordable === 0;
   el.upBadge.textContent = affordable;
 }
+/* ---------- рейтинг игроков: кто больше всех нажал ---------- */
+const LB_NAME = 'clicks';   // техническое название лидерборда в Консоли Яндекс Игр
+const lb = { data: null, at: 0, ver: 0, loading: false, error: false, sent: 0, sentAt: 0 };
+const esc = v => String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const yaLb = {
+  name: 'yandex',
+  status() { return player && player.isAuthorized && player.isAuthorized() ? 'ok' : 'login'; },
+  submit(score) { return ysdk.leaderboards.setScore(LB_NAME, score); },
+  async load() {
+    const auth = this.status() === 'ok';
+    const r = await ysdk.leaderboards.getEntries(LB_NAME, auth ? { quantityTop: 10, includeUser: true, quantityAround: 2 } : { quantityTop: 10 });
+    const myId = auth && player.getUniqueID ? player.getUniqueID() : null;
+    const rows = (r && r.entries || []).map(e => ({
+      rank: e.rank, score: e.score,
+      name: (e.player && e.player.publicName) || '',
+      me: !!(myId && e.player && e.player.uniqueID === myId),
+    }));
+    return { rows, myRank: (r && r.userRank) || 0, total: 0 };
+  },
+  async login() {
+    await ysdk.auth.openAuthDialog();
+    player = await withTimeout(ysdk.getPlayer({ scopes: false }), 6000) || player;
+    // у аккаунта может быть свой прогресс: берём тот, где больше отснято
+    try {
+      const d = await withTimeout(player.getData(['save']), 5000);
+      const c = sane(d && d.save);
+      if (c && c.life > S.life) {
+        Object.assign(S, c);
+        if (S.films > COLOR_FILM) document.body.classList.add('color');
+        syncToggles();
+      } else flushSave(true);
+    } catch (e) {}
+  },
+};
+function lbApi() {
+  if (ysdk && ysdk.lbCustom) return ysdk.lbCustom;
+  if (!mock && ysdk && ysdk.leaderboards) return yaLb;
+  return null;
+}
+async function lbSubmit(urgent) {
+  const api = lbApi();
+  if (!api || api.name === 'off' || api.status() !== 'ok') return;
+  const score = Math.floor(S.clicks);
+  const since = Date.now() - lb.sentAt;
+  if (score <= lb.sent || since < 1500 || (!urgent && since < 30000)) return;
+  lb.sentAt = Date.now();
+  try { await api.submit(score); lb.sent = score; } catch (e) { console.warn('leaderboard submit', e); }
+}
+async function lbRefresh(force) {
+  const api = lbApi();
+  if (!api || api.name === 'off' || lb.loading) return;
+  if (!force && lb.data && Date.now() - lb.at < 30000) return;
+  lb.loading = true; lb.ver++;
+  if (tab === 'rating') renderList(true);
+  try {
+    await lbSubmit(true);
+    lb.data = await api.load();
+    lb.at = Date.now(); lb.error = false;
+  } catch (e) { console.warn('leaderboard', e); lb.error = true; }
+  lb.loading = false; lb.ver++;
+  if (tab === 'rating') renderList(true);
+}
+function ratingHtml() {
+  const api = lbApi(), d = lb.data;
+  let h = `<div class="stats"><div>${t('lbYourClicks')}<b data-f="lc">${fmt(S.clicks)}</b></div><div>${t('lbYourRank')}<b>${d && d.myRank ? '№ ' + NF0.format(d.myRank) : '—'}</b></div></div>`;
+  if (!api || api.name === 'off') {
+    const key = api && api.reason === 'tgonly' ? 'lbTgOnly' : api && api.reason === 'soon' ? 'lbSoon' : 'lbOff';
+    return h + `<div class="empty">${t(key)}</div>`;
+  }
+  if (api.status() === 'login' && api.login) {
+    h += `<div class="lbnote"><p>${t('lbLogin')}</p><button class="lbbtn" type="button" data-lb="login">${t('lbLoginBtn')}</button></div>`;
+  }
+  const refresh = `<button class="lbbtn ghost" type="button" data-lb="refresh"${lb.loading ? ' disabled' : ''}>${t(lb.loading ? 'lbLoadingShort' : 'lbRefresh')}</button>`;
+  if (!d) {
+    if (lb.error) return h + `<div class="empty">${t('lbError')}</div><div class="lbfoot"><span></span>${refresh}</div>`;
+    return h + `<div class="empty">${t('lbLoading')}</div>`;
+  }
+  if (!d.rows.length) h += `<div class="empty">${t('lbEmpty')}</div>`;
+  let prev = 0;
+  d.rows.forEach(r => {
+    if (prev && r.rank > prev + 1) h += '<div class="lbgap" aria-hidden="true">···</div>';
+    prev = r.rank;
+    h += `<div class="row lbrow${r.me ? ' me' : ''}"><span class="n${r.rank >= 1000 ? ' long' : ''}">${r.rank <= 3 ? `<i class="medal">${r.rank}</i>` : NF0.format(r.rank)}</span><span class="main"><span class="txt"><span class="nm">${esc(r.name || t('lbAnon'))}</span>${r.me ? `<span class="ds">${t('lbMe')}</span>` : ''}</span></span><span class="pr"><b>${fmt(r.score)}</b><small>${t('lbTaps', r.score)}</small></span></div>`;
+  });
+  h += `<div class="lbfoot"><span>${lb.error ? t('lbError') : d.total ? t('lbTotal', d.total) : ''}</span>${refresh}</div>`;
+  return h;
+}
+el.list.addEventListener('click', async e => {
+  const b = e.target.closest('[data-lb]'); if (!b || b.disabled) return;
+  audioInit(); SFX.tick(); haptic('tick');
+  const api = lbApi();
+  if (b.dataset.lb === 'login' && api && api.login) {
+    try { await api.login(); } catch (err) { console.warn('login', err); }
+    lb.data = null; lbRefresh(true);
+  } else if (b.dataset.lb === 'refresh') lbRefresh(true);
+});
 function flashRow(r) { r.classList.remove('flash'); void r.offsetWidth; r.classList.add('flash'); }
 el.list.addEventListener('click', e => {
   const r = e.target.closest('button.row'); if (!r) return;
@@ -1580,6 +1748,7 @@ document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () =>
   document.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-selected', x === b ? 'true' : 'false'));
   el.list.scrollTop = 0;
   renderList(true);
+  if (tab === 'rating') lbRefresh(false);
 }));
 el.seg.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
@@ -1842,6 +2011,7 @@ function onVis(isHidden) {
     hold('hidden');
     hiddenAt = now();
     flushSave(true);
+    lbSubmit(true);
   } else {
     release('hidden');
     if (hiddenAt && started) {
@@ -1875,7 +2045,7 @@ document.addEventListener('pointerdown', () => audioInit(), { once: true, captur
 /* =========================================================
    Главный цикл
    ========================================================= */
-let last = performance.now(), lastUi = 0, lastShop = 0, lastSaveCheck = 0;
+let last = performance.now(), lastUi = 0, lastShop = 0, lastSaveCheck = 0, lastLb = 0;
 function frame(tm) {
   const dt = Math.min(0.25, Math.max(0, (tm - last) / 1000)); last = tm;
   if (!isPaused()) {
@@ -1890,6 +2060,7 @@ function frame(tm) {
   if (tm - lastUi > 100) { updateHUD(); lastUi = tm; }
   if (tm - lastShop > 250) { renderList(); lastShop = tm; }
   if (tm - lastSaveCheck > 5000) { lastSaveCheck = tm; flushSave(false); }
+  if (tm - lastLb > 30000) { lastLb = tm; lbSubmit(false); }
   requestAnimationFrame(frame);
 }
 
@@ -1956,7 +2127,7 @@ async function boot() {
 boot();
 
 // для отладки в консоли браузера
-window.__chernilka = { S, earn, fps, clickPower, save: () => flushSave(true) };
+window.__chernilka = { S, earn, fps, clickPower, save: () => flushSave(true), lb, lbRefresh };
 })();
 </script>
 </body>
